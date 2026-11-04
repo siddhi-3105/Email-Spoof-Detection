@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MailGuard – Spoof detection demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;700&family=Fraunces:wght@600&display=swap" rel="stylesheet">
+<style>
+html{color-scheme:light}
+:root{--bg:#f7f8fa;--panel:#fff;--ink:#1f2937;--mute:#6b7280;--line:#e5e7eb;--ok:#15803d;--okb:#e8f6ec;--warn:#a15c07;--warnb:#fdf3dc;--bad:#c0262d;--badb:#fdeaea;--acc:#1f2937;--accfg:#fff}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,sans-serif}
+h1,h2{font-family:Fraunces,Georgia,serif;margin:0}
+header{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+h1{font-size:22px}
+.acct{display:flex;gap:14px;align-items:center;flex-wrap:wrap;color:var(--mute);font-size:13px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700}
+.sim{background:var(--warnb);color:var(--warn)}
+.meter{width:150px;height:8px;background:var(--line);border-radius:9px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok);transition:width .5s}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:7px}
+button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:700}
+button:focus-visible,textarea:focus-visible{outline:2px solid var(--ok);outline-offset:2px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 20px 0}
+.stats div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.stats b{font-size:24px;display:block;line-height:1.2}.stats span{color:var(--mute);font-size:13px}
+main{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:16px;padding:16px 20px;align-items:start}
+.bottom{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;padding:0 20px 24px;align-items:start}
+@media(max-width:900px){main,.bottom{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+section h2{font-size:17px;margin-bottom:10px}
+#feed{max-height:560px;overflow:auto;margin:0 -18px;padding:0}
+.row{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:12px 18px;background:transparent;border-left:4px solid transparent}
+.row.sel{background:var(--bg)}
+.row.new{animation:fl 1.2s}
+.log{max-height:220px}
+@keyframes fl{from{background:var(--warnb)}}
+@media(prefers-reduced-motion:reduce){.row.new{animation:none}}
+.row.genuine{border-left-color:var(--ok)}.row.suspicious{border-left-color:var(--warn)}.row.spoofed{border-left-color:var(--bad)}
+.row b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row span{display:block;color:var(--mute);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;margin-right:6px}
+.genuine .tag.v,.t-genuine{background:var(--okb);color:var(--ok)}
+.suspicious .tag.v,.t-suspicious{background:var(--warnb);color:var(--warn)}
+.spoofed .tag.v,.t-spoofed{background:var(--badb);color:var(--bad)}
+.gone{opacity:.45;text-decoration:line-through}
+.verdict{font-family:Fraunces,Georgia,serif;font-size:28px;margin:2px 0 8px}
+.v-genuine{color:var(--ok)}.v-suspicious{color:var(--warn)}.v-spoofed{color:var(--bad)}
+.sub{margin:16px 0 4px;font-weight:700;font-size:14px}.small{font-size:13px;color:var(--mute)}
+.bar{height:10px;border-radius:9px;background:linear-gradient(90deg,var(--ok) 0 25%,var(--warn) 25% 55%,var(--bad) 55%);position:relative;margin:8px 0 14px}
+.bar i{position:absolute;top:-4px;width:4px;height:18px;background:var(--ink);border-radius:2px}
+ul{margin:6px 0 12px;padding-left:18px}li{margin:3px 0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px;margin:8px 0}.kv dt{color:var(--mute)}.kv dd{margin:0;word-break:break-all}
+.body{background:var(--bg);border-radius:8px;padding:10px;font-size:13px;white-space:pre-wrap}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+textarea{width:100%;min-height:150px;font:13px/1.45 ui-monospace,Menlo,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical}
+.stat{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:6px 0;font-size:13px}
+.hint{color:var(--mute);font-size:13px}
+.log{font-size:13px;max-height:180px;overflow:auto}.log div{padding:4px 0;border-bottom:1px dashed var(--line)}
+.wide{grid-column:1/-1}
+</style></head><body>
+<header>
+ <div><h1>MailGuard</h1><span class="hint">Live spoof detection and smart inbox cleaning</span></div>
+ <div class="acct"><span class="pill sim">Simulation: no real Gmail connected</span>
+  <span>demo.user@gmail.com</span>
+  <span>Storage <span id="used"></span> of 15 GB</span><div class="meter" aria-hidden="true"><i id="mbar"></i></div>
+  <button id="pause" aria-pressed="false">Pause feed</button></div>
+</header>
+<div class="stats">
+ <div><b id="sCount">0</b><span>Mails analysed</span></div>
+ <div><b id="sBlock">0</b><span>Spoofed mails blocked</span></div>
+ <div><b id="sAuto">0</b><span>Cleaned by AI</span></div>
+ <div><b id="sFree">0 MB</b><span>Storage freed</span></div>
+</div>
+<main>
+ <section><h2>Incoming mail (live)</h2><div id="feed" role="list"></div></section>
+ <section id="detail"><h2>Analysis</h2><p class="hint">Click any email on the left to see why it was marked genuine, suspicious or spoofed.</p></section>
+</main>
+<div class="bottom">
+ <section><h2>Doubtful email? Paste it here</h2>
+  <p class="hint">Paste the full email. Include the From:, Reply-To: and Authentication-Results: lines if you have them (Gmail: ⋮ → Show original).</p>
+  <textarea id="paste" aria-label="Paste email to check" placeholder="From: Support &lt;help@paypa1-secure.top&gt;&#10;Reply-To: payments@mail-ru.click&#10;Authentication-Results: spf=fail dkim=none dmarc=fail&#10;Subject: Urgent: account suspended&#10;&#10;Click http://paypa1-secure.top/login within 24 hours to verify..."></textarea>
+  <div class="acts"><button class="p" id="go">Check this email</button><button id="ex">Load an example</button></div>
+  <div id="pres" style="margin-top:14px"></div>
+ </section>
+ <section><h2>What the AI learned from you</h2>
+  <div id="learn" class="hint">Nothing yet. Delete or keep a few mails and the AI will start adjusting.</div>
+  <h2 style="margin-top:18px;font-size:15px">Activity</h2><div id="log" class="log"></div>
+ </section>
+</div>
+<script>
+const BRANDS={paypal:'paypal.com',amazon:'amazon.in',google:'google.com',hdfc:'hdfcbank.com',sbi:'sbi.co.in',microsoft:'microsoft.com',netflix:'netflix.com',flipkart:'flipkart.com',linkedin:'linkedin.com'};
+const BAD_TLD=/\.(xyz|top|click|ru|work|zip|support)(\/|$|\s|>)/i,RISKY=/\.(exe|scr|zip|html|js|iso|bat)\b/i,URG=/(urgent|immediately|within 24|suspend|verify your|act now|final notice|password expire|locked|gift card|lottery)/i;
+const dom=a=>(a.split('@')[1]||'').toLowerCase().replace(/[>\s]/g,'');
+const norm=s=>s.toLowerCase().replace(/0/g,'o').replace(/1/g,'l').replace(/rn/g,'m').replace(/[-_]/g,'');
+function analyse(m){let s=0,r=[],ok=[];const d=dom(m.addr);
+ const au={spf:m.spf,dkim:m.dkim,dmarc:m.dmarc};
+ for(const[k,v]of Object.entries(au)){const K=k.toUpperCase();
+  if(v==='fail'||v==='softfail'){s+=k==='spf'?30:k==='dkim'?20:25;r.push(K+' check failed: the sending server is not authorised for this domain.')}
+  else if(v==='pass')ok.push(K+' passed.');else{s+=6;r.push(K+' result missing, so the sender could not be verified.')}}
+ if(m.reply&&dom(m.reply)!==d){s+=15;r.push('Replies go to '+dom(m.reply)+', not '+d+'.')}
+ const lname=(m.name+' '+d).toLowerCase();
+ for(const[b,real]of Object.entries(BRANDS)){const base=real.split('.')[0];
+  if(lname.includes(b)&&d!==real&&!d.endsWith('.'+real)){
+   const root=d.split('.').slice(0,-1).join('.').split('.').pop();
+   if(norm(d).includes(b)&&root!==base&&root.length>0&&/[01\-]|rn/.test(root)||norm(root)===base&&root!==base){s+=35;r.push('Look-alike domain “'+d+'” imitates '+real+'.')}
+   else{s+=30;r.push('Claims to be '+b[0].toUpperCase()+b.slice(1)+' but is sent from '+d+', not '+real+'.')}break}}
+ if(URG.test(m.subject+' '+m.body)){s+=10;r.push('Pressure language (urgent, suspend, verify) is a common phishing pattern.')}
+ (m.links||[]).forEach(l=>{const h=(l.match(/^https?:\/\/([^\/\s:]+)/i)||[])[1]||'';
+  if(/^\d+\.\d+\.\d+\.\d+$/.test(h)){s+=20;r.push('Link points to a raw IP address: '+h)}
+  else if(BAD_TLD.test(h+'/')){s+=15;r.push('Link uses a high-risk domain: '+h)}
+  else if(h&&d&&!h.endsWith(d.split('.').slice(-2).join('.'))&&/login|verify|secure|account/i.test(l)){s+=10;r.push('Login link goes to '+h+', which differs from the sender domain.')}});
+ (m.files||[]).forEach(f=>{if(RISKY.test(f)){s+=20;r.push('Risky attachment type: '+f)}});
+ s=Math.min(100,s);if(!r.length)ok.push('No spoofing signs found.');
+ return{score:s,verdict:s>=55?'spoofed':s>=25?'suspicious':'genuine',reasons:r,ok}}
+const POOL=[
+{name:'Priya Sharma',addr:'priya.sharma@infosys.com',spf:'pass',dkim:'pass',dmarc:'pass',subject:'Sprint review moved to 4 pm',body:'Hi, the review is now at 4 pm in room B. Please update your slides.',cat:'work',mb:.4},
+{name:'HDFC Bank',addr:'alerts@hdfcbank.com',spf:'pass',dkim:'pass',dmarc:'pass',subject:'Your statement for October is ready',body:'Your monthly statement is available in NetBanking.',cat:'bank',mb:.8},
+{name:'HDFC Bank Security',addr:'security@hdfc-bank-verify.top',reply:'help@mailbox-ru.click',spf:'fail',dkim:'none',dmarc:'fail',subject:'Urgent: your account will be suspended',body:'Dear customer, verify your KYC immediately at http://hdfc-bank-verify.top/login or your account will be locked.',links:['http://hdfc-bank-verify.top/login'],cat:'bank',mb:.3},
+{name:'PayPal',addr:'service@paypa1-secure.com',reply:'pay@secure-pp.xyz',spf:'fail',dkim:'fail',dmarc:'fail',subject:'Final notice: verify your payment',body:'We detected unusual activity. Act now: http://paypa1-secure.com/verify',links:['http://paypa1-secure.com/verify'],cat:'bank',mb:.3},
+{name:'Amazon Deals',addr:'deals@amazon.in',spf:'pass',dkim:'pass',dmarc:'pass',subject:'Up to 60% off – Diwali weekend picks',body:'Top offers picked for you.',cat:'promo',mb:2.4},
+{name:'Flipkart Offers',addr:'offers@flipkart.com',spf:'pass',dkim:'pass',dmarc:'pass',subject:'Big Billion flash sale ends tonight',body:'Grab the deals before midnight.',cat:'promo',mb:3.1},
+{name:'LinkedIn',addr:'notifications@linkedin.com',spf:'pass',dkim:'pass',dmarc:'pass',subject:'12 people viewed your profile',body:'See who is looking at your profile.',cat:'social',mb:1.2},
+{name:'Tech Weekly',addr:'news@techweekly.io',spf:'pass',dkim:'pass',dmarc:'none',subject:'This week in AI: 8 stories',body:'Your weekly newsletter digest.',cat:'newsletter',mb:2.8},
+{name:'Rahul (Dad)',addr:'rahul.patil1962@gmail.com',spf:'pass',dkim:'pass',dmarc:'pass',subject:'Sunday lunch?',body:'Come home on Sunday, your mother is cooking.',cat:'personal',mb:.2},
+{name:'Microsoft Account Team',addr:'no-reply@micros0ft-support.work',spf:'softfail',dkim:'fail',dmarc:'fail',subject:'Password expires today',body:'Your password expires immediately. Open the attached form to keep access.',files:['reset_form.html'],links:['http://185.220.101.4/ms/login'],cat:'work',mb:.5},
+{name:'Dr. Mehta Clinic',addr:'reception@drmehtaclinic.in',spf:'pass',dkim:'pass',dmarc:'none',subject:'Appointment confirmed for Friday',body:'Your appointment is confirmed for Friday 11:30 am.',cat:'personal',mb:.1},
+{name:'Lucky Draw',addr:'winner@claim-prize.xyz',spf:'fail',dkim:'none',dmarc:'none',subject:'You won a lottery! Claim now',body:'Send a gift card code to claim your prize. http://claim-prize.xyz/now',links:['http://claim-prize.xyz/now'],cat:'promo',mb:.4},
+{name:'Google',addr:'no-reply@accounts.google.com',spf:'pass',dkim:'pass',dmarc:'pass',subject:'Security alert: new sign-in on Windows',body:'If this was you, no action is needed.',cat:'bank',mb:.1}];
+const BASE={bank:85,work:80,personal:72,social:28,newsletter:30,promo:18};
+let inbox=[],sel=null,id=0,paused=false,pref={cat:{},snd:{}},del={snd:{}},st={n:0,block:0,auto:0,free:0},used=11400;
+const $=x=>document.getElementById(x),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function imp(m){if(m.res.verdict==='spoofed')return 0;return clamp((BASE[m.cat]||50)+(pref.cat[m.cat]||0)+(pref.snd[m.addr]||0),0,100)}
+const lvl=n=>n>=65?'High':n>=35?'Normal':'Low';
+function log(t){const d=document.createElement('div');d.textContent=new Date().toLocaleTimeString()+'  '+t;$('log').prepend(d)}
+function arrive(){const p=POOL[Math.floor(Math.random()*POOL.length)];
+ const m={...p,id:++id,res:analyse(p),status:'inbox',t:new Date()};m.imp=imp(m);st.n++;used+=m.mb;
+ if(m.res.verdict==='spoofed'){m.status='quarantined';st.block++;st.free+=m.mb;used-=m.mb;log('Blocked spoofed mail from '+m.addr)}
+ else if((del.snd[m.addr]||0)>=2&&m.imp<35){m.status='auto';st.auto++;st.free+=m.mb;used-=m.mb;log('Auto-cleaned “'+m.subject+'” (you deleted this sender before)')}
+ else log('Analysed “'+m.subject+'”: '+m.res.verdict+', '+lvl(m.imp)+' importance');
+ inbox.unshift(m);inbox=inbox.slice(0,40);render(m.id)}
+function render(newId){
+ $('feed').innerHTML=inbox.map(m=>'<button class="row '+m.res.verdict+(m.id===newId?' new':'')+(sel===m.id?' sel':'')+'" data-id="'+m.id+'"><b class="'+(m.status==='deleted'||m.status==='auto'?'gone':'')+'"><span class="tag v" style="display:inline">'+m.res.verdict+'</span>'+esc(m.subject)+'</b><span>'+esc(m.name)+(m.status==='auto'?' · cleaned by AI':m.status==='quarantined'?' · quarantined':m.status==='kept'?' · kept':m.status==='deleted'?' · deleted':'')+'</span></button>').join('');
+ $('sCount').textContent=st.n;$('sBlock').textContent=st.block;$('sAuto').textContent=st.auto;$('sFree').textContent=st.free.toFixed(1)+' MB';
+ $('used').textContent=(used/1000).toFixed(2)+' GB';$('mbar').style.width=(used/15000*100)+'%';
+ const L=[...Object.entries(pref.cat).filter(([,v])=>v).map(([k,v])=>[v,'Mails in “'+k+'”: '+(v<0?'treated as less important':'treated as more important')+' ('+v+')']),...Object.entries(del.snd).filter(([,v])=>v>=2).map(([k,v])=>[-99,k+' deleted '+v+' times: future mails are cleaned automatically'])];
+ if(L.length)$('learn').innerHTML=L.map(x=>'<div class="stat"><span>'+esc(x[1])+'</span></div>').join('')}
+function verdictBlock(m,r,extra){const t={genuine:'Looks genuine',suspicious:'Suspicious: be careful',spoofed:'Spoofed: do not trust'}[r.verdict];
+ return '<div class="verdict v-'+r.verdict+'">'+t+'</div><div class="small">Risk score '+r.score+' out of 100</div><div class="bar"><i style="left:calc('+r.score+'% - 2px)"></i></div>'+
+ (r.reasons.length?'<div class="sub">Why</div><ul>'+r.reasons.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<div class="sub">Why</div><ul>'+r.ok.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>')+
+ '<div class="sub">Sender details</div><dl class="kv"><dt>From</dt><dd>'+esc(m.name)+' &lt;'+esc(m.addr)+'&gt;</dd>'+(m.reply?'<dt>Reply-To</dt><dd>'+esc(m.reply)+'</dd>':'')+'<dt>SPF / DKIM / DMARC</dt><dd>'+[m.spf,m.dkim,m.dmarc].map(x=>x||'none').join(' / ')+'</dd></dl>'+(extra||'')}
+function show(i){const m=inbox.find(x=>x.id===i);if(!m)return;sel=i;
+ $('detail').innerHTML='<h2>Analysis</h2>'+verdictBlock(m,m.res,'<div class="sub">AI importance: '+lvl(m.imp)+'</div><div class="small">Category “'+m.cat+'”, adjusted by what you kept or deleted before.</div><div class="sub">Message</div><div class="body"><strong>'+esc(m.subject)+'</strong>\n\n'+esc(m.body)+'</div><div class="acts"><button data-a="del">Delete</button><button data-a="keep">Keep</button></div>');
+ render()}
+function act(a){const m=inbox.find(x=>x.id===sel);if(!m||m.status==='deleted')return;
+ const d=a==='del'?-12:12;pref.cat[m.cat]=clamp((pref.cat[m.cat]||0)+d,-40,40);pref.snd[m.addr]=clamp((pref.snd[m.addr]||0)+d,-40,40);
+ if(a==='del'){m.status='deleted';del.snd[m.addr]=(del.snd[m.addr]||0)+1;if(m.status!=='quarantined'){st.free+=m.mb;used-=m.mb}log('You deleted “'+m.subject+'”. AI learned to rank “'+m.cat+'” lower.')}
+ else{m.status='kept';log('You kept “'+m.subject+'”. AI learned to rank “'+m.cat+'” higher.')}
+ inbox.forEach(x=>{if(x.res.verdict!=='spoofed')x.imp=imp(x)});show(sel)}
+function parse(t){const g=re=>(t.match(re)||[])[1]||'';
+ const from=g(/^from:\s*(.+)$/im),em=(from.match(/[\w.+-]+@[\w.-]+/)||[''])[0],nm=from.replace(/<.*>/,'').replace(/["']/g,'').trim()||em;
+ const au=k=>(g(new RegExp(k+'\\s*=\\s*(\\w+)','i'))||'none').toLowerCase();
+ const rp=(g(/^reply-to:\s*(.+)$/im).match(/[\w.+-]+@[\w.-]+/)||[''])[0];
+ return{name:nm,addr:em,reply:rp,spf:au('spf'),dkim:au('dkim'),dmarc:au('dmarc'),subject:g(/^subject:\s*(.+)$/im),body:t,links:t.match(/https?:\/\/[^\s<>"]+/g)||[],files:t.match(/[\w-]+\.(exe|scr|zip|html|js|iso|bat)\b/gi)||[]}}
+$('go').onclick=()=>{const t=$('paste').value.trim();if(!t){$('pres').innerHTML='<p class="hint">Paste an email first.</p>';return}
+ const m=parse(t);if(!m.addr){$('pres').innerHTML='<p class="hint">No From: address found. Add a line like From: Name &lt;name@domain.com&gt;.</p>';return}
+ $('pres').innerHTML=verdictBlock(m,analyse(m))};
+$('ex').onclick=()=>{$('paste').value='From: Amazon Support <order-update@amaz0n-help.top>\nReply-To: refunds@mail-ru.click\nAuthentication-Results: spf=fail dkim=none dmarc=fail\nSubject: Final notice: verify your payment\n\nYour account will be suspended. Act now: http://amaz0n-help.top/verify\nOpen invoice.zip to see the charge.'};
+$('feed').onclick=e=>{const b=e.target.closest('.row');if(b)show(+b.dataset.id)};
+$('detail').onclick=e=>{const a=e.target.dataset.a;if(a)act(a)};
+$('pause').onclick=function(){paused=!paused;this.textContent=paused?'Resume feed':'Pause feed';this.setAttribute('aria-pressed',paused)};
+for(let i=0;i<5;i++)arrive();setInterval(()=>{if(!paused)arrive()},5000);
+</script></body></html>
